@@ -41,8 +41,8 @@
             <br/>
         </td>
         <td align="center">
-            <a href="https://github.com/MinchaeGwon">
-                <img src="https://avatars.githubusercontent.com/MinchaeGwon" width="100px;" alt=""/>
+            <a href="https://github.com/MinchaeKwon">
+                <img src="https://avatars.githubusercontent.com/MinchaeKwon" width="100px;" alt=""/>
                 <br/>
                 <sub>
                     <b>권민채</b>
