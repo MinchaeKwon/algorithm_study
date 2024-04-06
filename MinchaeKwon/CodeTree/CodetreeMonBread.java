@@ -2,176 +2,201 @@
  * 코드트리 빵
  * 
  * @author minchae
- * @date 2024. 3. 29.
+ * @date 2024. 4. 6.
  */
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.StringTokenizer;
 
-public class Retry1 {
+public class Retry2 {
 	
-	static class Pair {
+	static class Node implements Comparable<Node> {
 		int x;
 		int y;
-		int d;
+		int dir;
+		int dist;
 		
-		public Pair(int x, int y) {
+		public Node(int x, int y) {
 			this.x = x;
 			this.y = y;
 		}
 		
-		public Pair(int x, int y, int d) {
+		public Node(int x, int y, int dist) {
 			this.x = x;
 			this.y = y;
-			this.d = d;
+			this.dist = dist;
+		}
+		
+		public Node(int x, int y, int dir, int dist) {
+			this.x = x;
+			this.y = y;
+			this.dir = dir;
+			this.dist = dist;
+		}
+		
+		public boolean isSame(Node node) {
+			return this.x == node.x && this.y == node.y;
+		}
+
+		@Override
+		public int compareTo(Node o) {
+			if (this.dist == o.dist) {
+				if (this.x == o.x) {
+					return this.y - o.y;
+				}
+				
+				return this.x - o.x;
+			}
+			
+			return this.dist - o.dist;
 		}
 	}
 	
-	// 상좌우하 -> 방향 우선순위
+	// 상좌우하
 	static int[] dx = {-1, 0, 0, 1};
 	static int[] dy = {0, -1, 1, 0};
 	
 	static int n, m;
-	static int[][] map; // 0 빈 칸, 1 베이스캠프, 2 갈 수 없는 곳
+	static int[][] map; // 0 빈 공간, 1 베이스캠프, 2 지나갈 수 없는 곳
 	
-	static Pair[] person;
-	static Pair[] cvs; // 편의점 위치
+	static Node[] person;
+	static Node[] store;
 	
 	static int time;
 
 	public static void main(String[] args) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        StringTokenizer st = new StringTokenizer(br.readLine());
-        
-        n = Integer.parseInt(st.nextToken());
-        m = Integer.parseInt(st.nextToken());
-        
-        map = new int[n][n];
-        person = new Pair[m];
-        cvs = new Pair[m];
-        
-        for (int i = 0; i < n; i++) {
-        	st = new StringTokenizer(br.readLine());
-        	
-        	for (int j = 0; j < n; j++) {
-        		map[i][j] = Integer.parseInt(st.nextToken());
-        	}
-        }
-        
-        for (int i = 0; i < m; i++) {
-        	st = new StringTokenizer(br.readLine());
-        	
-        	int x = Integer.parseInt(st.nextToken()) - 1;
-        	int y = Integer.parseInt(st.nextToken()) - 1;
-        	
-        	cvs[i] = new Pair(x, y);
-        	person[i] = new Pair(-1, -1);
-        }
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		
+		n = Integer.parseInt(st.nextToken());
+		m = Integer.parseInt(st.nextToken());
+		
+		map = new int[n][n];
+		person = new Node[m];
+		store = new Node[m];
+		
+		for (int i = 0; i < n; i++) {
+			st = new StringTokenizer(br.readLine());
+			
+			for (int j = 0; j < n; j++) {
+				map[i][j] = Integer.parseInt(st.nextToken());
+			}
+		}
 
-        while (true) {
-        	time++;
-        	
-        	moveCvs();
-        	
-        	if (time <= m) {
-        		moveBaseCamp();
-    		}
-        	
-        	if (isEnd()) {
-        		break;
-        	}
-        }
-        
-        System.out.println(time);
+		for (int i = 0; i < m; i++) {
+			st = new StringTokenizer(br.readLine());
+			
+			int x = Integer.parseInt(st.nextToken()) - 1;
+			int y = Integer.parseInt(st.nextToken()) - 1;
+			
+			store[i] = new Node(x, y);
+			person[i] = new Node(-1, -1);
+		}
+		
+		time = 1;
+		
+		while (true) {
+			moveStore();
+			
+			if (time <= m) {
+				moveBasecamp(store[time - 1]);	
+			}
+			
+			if (isFinish()) {
+				break;
+			}
+			
+			time++;
+		}
+		
+		System.out.println(time);
 	}
 	
-	private static void moveCvs() {
-		// 모든 사람들이 본인이 가고싶은 편의점 방향으로 한 칸 움직임
+	private static void moveStore() {
 		for (int i = 0; i < m; i++) {
-			// 격자 밖이거나 이미 편의점에 도착한 경우 다음으로 넘어감
-			if (!isRange(person[i].x, person[i].y) || (person[i].x == cvs[i].x && person[i].y == cvs[i].y)) {
+			Node start = person[i];
+			Node end = store[i];
+			
+			// 격자 밖에 있거나 편의점에 도착한 경우 다음으로 넘어감
+			if (!isRange(start.x, start.y) || start.isSame(end)) {
 				continue;
 			}
 			
-			int d = bfs(person[i], cvs[i]);
+			int dir = findDir(start, end);
 			
-			person[i].x += dx[d];
-			person[i].y += dy[d];
+			start.x += dx[dir];
+			start.y += dy[dir];
 		}
 		
-		// 편의점으로 이동한 사람이 있을 경우 해당 편의점에 이동할 수 없다는 표시를 해줌
-		// 모든 사람들이 이동한 뒤에 해줌
+		// 모두 움직인 후에 편의점에 도착했는지 확인
 		for (int i = 0; i < m; i++) {
-			if (person[i].x == cvs[i].x && person[i].y == cvs[i].y) {
-				map[person[i].x][person[i].y] = 2;
+			if (person[i].isSame(store[i])) { 
+				map[person[i].x][person[i].y] = 2; // 지나갈 수 없는 곳으로 변경
 			}
 		}
 	}
 	
-	// 특정 위치까지의 최단 거리 구함
-	private static int bfs(Pair start, Pair end) {
-		Queue<Pair> q = new LinkedList<>();
+	// 가고싶은 편의점까지 최단거리가 되는 방향을 구함
+	private static int findDir(Node start, Node end) {
+		Queue<Node> q = new LinkedList<>();
 		boolean[][] visited = new boolean[n][n];
-
-		q.add(new Pair(start.x, start.y, -1));
+		
+		q.add(new Node(start.x, start.y, -1, 0));
 		visited[start.x][start.y] = true;
-
+		
+		ArrayList<Node> list = new ArrayList<>();
+		
 		while (!q.isEmpty()) {
-			Pair cur = q.poll();
-
-			if (cur.x == end.x && cur.y == end.y) {
-				return cur.d;
+			Node cur = q.poll();
+			
+			// 편의점으로 가는 최단거리가 여러 개가 될수도 있음
+			if (cur.isSame(end)) {
+				list.add(cur);
 			}
-
+			
 			for (int i = 0; i < 4; i++) {
 				int nx = cur.x + dx[i];
 				int ny = cur.y + dy[i];
-
+				
 				if (!isRange(nx, ny) || visited[nx][ny] || map[nx][ny] == 2) {
 					continue;
 				}
 				
-				/*
-				 * 본인이 가고싶은 편의점에 최단거리로 갈 수 있는 방향으로 한 칸 움직이기 때문에 처음 이동한 방향을 그대로 저장함
-				 * 방향이 정해지지 않은 경우 현재 이동방향 저장하고, 방향이 있는 경우에는 해당 방향 그대로 저장
-				 */
-				q.add(new Pair(nx, ny, cur.d == -1 ? i : cur.d));
-
-				/*
-				 * 처음에 이동하는대로 방향을 다 새로 저장하고 편의점 발견한 경우 그 방향을 반환함 
-				 * 이렇게 하면 편의점 이전 칸에서 편의점으로 이동하는 방향이 저장됨 -> 시간초과 발생
-				 * 한 칸만 움직이는 것이기 때문에 처음 정해진 방향을 그대로 저장해야함 -> 위에서의 코드
-				 */
-//				q.add(new Pair(nx, ny, i));
-				
+				q.add(new Node(nx, ny, cur.dir == -1 ? i : cur.dir, cur.dist + 1));
 				visited[nx][ny] = true;
 			}
 		}
-
-		return 0;
+		
+		if (list.size() > 1) {
+			Collections.sort(list);
+		}
+		
+		Node result = list.get(0);
+		
+		return result.dir;
 	}
 	
-	// time번 사람이 자신이 가고싶은 편의점과 가까운 베이스캠프로 이동
-	private static void moveBaseCamp() {
-		Queue<Pair> q = new LinkedList<>();
+	private static void moveBasecamp(Node start) {
+		Queue<Node> q = new LinkedList<>();
 		boolean[][] visited = new boolean[n][n];
 		
-		q.add(cvs[time - 1]);
-		visited[cvs[time - 1].x][cvs[time - 1].y] = true;
+		q.add(new Node(start.x, start.y, 0));
+		visited[start.x][start.y] = true;
+		
+		ArrayList<Node> list = new ArrayList<>();
 		
 		while (!q.isEmpty()) {
-			Pair cur = q.poll();
+			Node cur = q.poll();
 			
-			// 베이스캠프 발견한 경우 사람 이동 시킴
+			// 최단거리가 같은 베이스캠프가 여러 개 있을 수도 있음
 			if (map[cur.x][cur.y] == 1) {
-				person[time - 1] = new Pair(cur.x, cur.y);
-				map[cur.x][cur.y] = 2; // 갈 수 없는 표시 해줌
-				
-				return;
+				list.add(cur);
 			}
 			
 			for (int i = 0; i < 4; i++) {
@@ -182,16 +207,24 @@ public class Retry1 {
 					continue;
 				}
 				
-				q.add(new Pair(nx, ny, i));
+				q.add(new Node(nx, ny, cur.dist + 1));
 				visited[nx][ny] = true;
 			}
 		}
+		
+		if (list.size() > 1) {
+			Collections.sort(list);	
+		}
+		
+		Node base = list.get(0);
+		map[base.x][base.y] = 2;
+		person[time - 1] = base;
 	}
 	
-	// 모든 사람들이 편의점에 도착했는지 확인
-	private static boolean isEnd() {
+	// 모든 사람이 편의점에 도착했는지 확인
+	private static boolean isFinish() {
 		for (int i = 0; i < m; i++) {
-			if (!(person[i].x == cvs[i].x && person[i].y == cvs[i].y)) {
+			if (!person[i].isSame(store[i])) {
 				return false;
 			}
 		}
